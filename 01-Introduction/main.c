@@ -35,13 +35,39 @@ main()
 		perror("Error: vkEnumeratePhysicalDevices()");
 		return -1;
 	}
-	printf("Nomber of devices: %lu", device_count);
+	printf("Number of devices: %lu\n", device_count);
 	VkPhysicalDevice *devices = malloc(device_count * sizeof(VkPhysicalDevice));
 	result = vkEnumeratePhysicalDevices(instance, &device_count, devices);
 	if (result != VK_SUCCESS) {
 		perror("Error: vkEnumeratePhysicalDevices()");
 		return -1;
 	}
+
+	VkPhysicalDeviceProperties physical_properties;
+	vkGetPhysicalDeviceProperties(devices[0], &physical_properties);
+	printf("Device Name: %s %Lu %Lu %Lu\n",
+	       physical_properties.deviceName,
+	       physical_properties.apiVersion,
+	       physical_properties.vendorID,
+		physical_properties.deviceID);
+
+	VkPhysicalDeviceFeatures physical_features;
+	vkGetPhysicalDeviceFeatures(devices[0], &physical_features);
+
+	VkPhysicalDeviceMemoryProperties physical_memory;
+	vkGetPhysicalDeviceMemoryProperties(devices[0], &physical_memory);
+	printf("Memory Properties: %Lu %Lu\n",
+	       physical_memory.memoryTypeCount,
+	       physical_memory.memoryHeapCount);
+
+	uint32_t queue_family;
+	vkGetPhysicalDeviceQueueFamilyProperties(
+		devices[0], &queue_family, NULL);
+	VkQueueFamilyProperties *family_properties =
+		malloc(queue_family * sizeof(VkQueueFamilyProperties));
+	vkGetPhysicalDeviceQueueFamilyProperties(
+		devices[0], &queue_family, family_properties
+		);
 	
 	return 0;
 }
