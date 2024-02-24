@@ -1,7 +1,12 @@
 CC = gcc
 LDFLAGS = -lvulkan
 
-all: 01-Introduction/main
+SRC = 01-Introduction/main.c
 
-01-Introduction/main: 01-Introduction/main.c
+all: format 01-Introduction/main
+
+01-Introduction/main: $(SRC)
 	$(CC) $(CFLAGS) -o $@ 01-Introduction/main.c $(LDFLAGS)
+
+format: $(SRC)
+	clang-format 01-Introduction/main.c -i
