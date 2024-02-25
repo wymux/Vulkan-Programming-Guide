@@ -5,6 +5,7 @@
 
 int main()
 {
+	VkResult result = VK_SUCCESS;
 	VkApplicationInfo app_info;
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.pNext = NULL;
@@ -20,8 +21,33 @@ int main()
 	create_info.enabledExtensionCount = 0;
 	create_info.ppEnabledExtensionNames = NULL;
 
+	uint32_t instance_extension_count = 0;
+	vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count,
+					       NULL);
+	if (result != VK_SUCCESS) {
+		perror("vkEnumerateInstance2wssssssExtensionProperties()");
+		return -1;
+	}
+	if (instance_extension_count != 0) {
+		VkExtensionProperties *instance_extension_properties =
+			calloc(instance_extension_count,
+			       sizeof(VkExtensionProperties));
+		vkEnumerateInstanceExtensionProperties(
+			NULL, &instance_extension_count,
+			instance_extension_properties);
+		for (int i = 0; i < instance_extension_count; i++)
+			printf("Extension Count: %Lu\n"
+			       "SpecVersion: %Lu\n"
+			       "Extension Name: %s\n",
+			       (instance_extension_properties +
+				i * sizeof(vkEnumerateInstanceExtensionProperties))
+				       ->specVersion,
+			       (instance_extension_properties +
+				i * sizeof(vkEnumerateInstanceExtensionProperties))
+				       ->extensionName);
+	}
+
 	VkInstance instance;
-	VkResult result = VK_SUCCESS;
 	result = vkCreateInstance(&create_info, NULL, &instance);
 	if (result != VK_SUCCESS) {
 		perror("Error: vkCreateInstance()");
@@ -111,6 +137,28 @@ int main()
 	}
 	if (result != VK_SUCCESS) {
 		perror("vkEnumarateInstanceLayerProperties()");
+		return -1;
+	}
+
+	uint32_t layer_count = 0;
+	result = vkEnumerateDeviceLayerProperties(devices[0], &layer_count,
+						  NULL);
+	if (layer_count != 0) {
+		VkLayerProperties *layer_properties =
+			calloc(layer_count, sizeof(VkLayerProperties));
+		result = vkEnumerateDeviceLayerProperties(
+			devices[0], &layer_count, layer_properties);
+
+		printf("specVersion: %Lu\n"
+		       "implemantationVersion: %Lu\n"
+		       "description: %s",
+		       layer_properties->specVersion,
+		       layer_properties->implementationVersion,
+		       layer_properties->description);
+	}
+
+	if (result != VK_SUCCESS) {
+		perror("vkEnumerateDeviceLayerProperties()");
 		return -1;
 	}
 
