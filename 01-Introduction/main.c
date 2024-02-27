@@ -25,17 +25,36 @@ int main()
 	vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count,
 					       NULL);
 	if (result != VK_SUCCESS) {
-		perror("vkEnumerateInstance2wssssssExtensionProperties()");
+		perror("vkEnumerateInstanceExtensionProperties()");
 		return -1;
 	}
+
+	VkExtensionProperties *instance_extension_properties;
 	if (instance_extension_count != 0) {
-		VkExtensionProperties *instance_extension_properties =
+		const char **extension_names_arr;
+		extension_names_arr =
+			calloc(instance_extension_count, sizeof(char *));
+		instance_extension_properties =
 			calloc(instance_extension_count,
 			       sizeof(VkExtensionProperties));
 		vkEnumerateInstanceExtensionProperties(
 			NULL, &instance_extension_count,
 			instance_extension_properties);
-		for (int i = 0; i < instance_extension_count; i++)
+		for (int i = 0; i < instance_extension_count; i++) {
+			extension_names_arr[i] =
+				malloc(VK_MAX_EXTENSION_NAME_SIZE);
+			if (extension_names_arr[i] == NULL) {
+				perror("malloc");
+				return -1;
+			}
+
+			extension_names_arr[i] =
+				(instance_extension_properties + i)
+					->extensionName;
+			create_info.enabledExtensionCount =
+				instance_extension_count;
+			create_info.ppEnabledExtensionNames =
+				extension_names_arr;
 			printf("Extension Count: %Lu\n"
 			       "SpecVersion: %Lu\n"
 			       "Extension Name: %s\n",
@@ -45,6 +64,7 @@ int main()
 			       (instance_extension_properties +
 				i * sizeof(vkEnumerateInstanceExtensionProperties))
 				       ->extensionName);
+		}
 	}
 
 	VkInstance instance;
@@ -161,6 +181,23 @@ int main()
 		perror("vkEnumerateDeviceLayerProperties()");
 		return -1;
 	}
+
+	PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
+		(PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
+			instance, "vkCreateDebugReportCallbackEXT");
+	result = vkDeviceWaitIdle(devices[0]);
+	if (result != VK_SUCCESS) {
+		perror("vkDeviceWaitIdle()");
+		return -1;
+	}
+
+	result = vkDestroyDevice(devices[0], NULL);
+	if (result != VK_SUCCESS) {
+		perror("vkDastroyDevice()");
+		return -1;
+	}
+
+	vkDestroyInstance(instance, NULL);
 
 	return 0;
 }
