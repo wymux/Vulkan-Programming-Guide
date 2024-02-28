@@ -1,7 +1,40 @@
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <vulkan/vulkan.h>
+
+static void *VKAPI_CALL vk_alloc(void *pUserData, size_t size, size_t alignment,
+				 VkSystemAllocationScope allocationScope)
+{
+	return aligned_alloc(alignment, size);
+}
+
+static void *VKAPI_CALL vk_realloc(void *pUserData, void *pOriginal,
+				   size_t size, size_t alignment,
+				   VkSystemAllocationScope allocationScope)
+{
+	pOriginal = realloc(pOriginal, size);
+	return pOriginal;
+}
+
+static void VKAPI_CALL vk_free(void *pUserData, void *pMemory)
+{
+	free(pMemory);
+}
+
+static void VKAPI_CALL vk_internal_alloc(
+	void *pUserData, size_t size, VkInternalAllocationType allocationType,
+	VkSystemAllocationScope allocationScope)
+{
+	printf("Internal allocation of size %zu, type %d, scope %d\n", size,
+	       allocationType, allocationScope);
+}
+
+static void VKAPI_CALL vk_internal_free(void *pUserData, size_t size,
+					VkInternalAllocationType allocationType,
+					VkSystemAllocationScope allocationScope)
+{
+	printf("Size: %zu\n", size);
+}
 
 int main()
 {
@@ -67,8 +100,16 @@ int main()
 		}
 	}
 
+	VkAllocationCallbacks vk_allocator;
+	vk_allocator.pUserData = NULL;
+	vk_allocator.pfnAllocation = vk_alloc;
+	vk_allocator.pfnReallocation = vk_realloc;
+	vk_allocator.pfnFree = vk_free;
+	vk_allocator.pfnInternalAllocation = vk_internal_alloc;
+	vk_allocator.pfnInternalFree = vk_internal_free;
+
 	VkInstance instance;
-	result = vkCreateInstance(&create_info, NULL, &instance);
+	result = vkCreateInstance(&create_info, &vk_allocator, &instance);
 	if (result != VK_SUCCESS) {
 		perror("Error: vkCreateInstance()");
 		return -1;
@@ -185,6 +226,38 @@ int main()
 	PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
 		(PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
 			instance, "vkCreateDebugReportCallbackEXT");
+
+	VkBufferCreateInfo buffer_create_info;
+	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_create_info.pNext = NULL;
+	buffer_create_info.flags = 0;
+	buffer_create_info.size = 1024 * 1024;
+	buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+				   VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+	buffer_create_info.queueFamilyIndexCount = 0;
+	buffer_create_info.pQueueFamilyIndices = NULL;
+
+	VkBuffer buffer = VK_NULL_HANDLE;
+	result = vkCreateBuffer(device, &buffer_create_info, &vk_allocator,
+				&buffer);
+	if (result != VK_SUCCESS) {
+		perror("vkCreateDBUffer()");
+		return -1;
+	}
+
+	VkFormatFeatureFlags format_flags =
+		VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+		VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
+		VK_FORMAT_FEATURE_BLIT_DST_BIT;
+	VkFormatProperties format_properties;
+	format_properties.linearTilingFeatures = format_flags;
+	format_properties.optimalTilingFeatures = format_flags;
+	format_properties.bufferFeatures = format_flags;
+
+	vkGetPhysicalDeviceFormatProperties(devices[0], NULL,
+					    &format_properties);
+
 	result = vkDeviceWaitIdle(device);
 	if (result != VK_SUCCESS) {
 		perror("vkDeviceWaitIdle()");
@@ -192,7 +265,6 @@ int main()
 	}
 
 	vkDestroyDevice(device, NULL);
-
 	vkDestroyInstance(instance, NULL);
 
 	return 0;
