@@ -255,8 +255,50 @@ int main()
 	format_properties.optimalTilingFeatures = format_flags;
 	format_properties.bufferFeatures = format_flags;
 
-	vkGetPhysicalDeviceFormatProperties(devices[0], NULL,
+	VkFormat vk_format = VK_FORMAT_R8G8B8A8_UNORM;
+	vkGetPhysicalDeviceFormatProperties(devices[0], vk_format,
 					    &format_properties);
+
+	VkExtent3D vk_extent;
+	vk_extent.width = 10;
+	vk_extent.height = 1;
+	vk_extent.depth = 1;
+
+	VkImageFormatProperties image_format_properties;
+	image_format_properties.maxExtent = vk_extent;
+	VkImageUsageFlags vk_usage = VK_IMAGE_USAGE_STORAGE_BIT |
+				     VK_IMAGE_USAGE_SAMPLED_BIT |
+				     VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	VkImageCreateFlags vk_image_flags =
+		VK_IMAGE_CREATE_SPARSE_BINDING_BIT |
+		VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
+		VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
+	VkImageCreateInfo vk_image_create_info;
+	vk_image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	vk_image_create_info.pNext = NULL;
+	vk_image_create_info.flags = vk_image_flags;
+	vk_image_create_info.imageType = VK_IMAGE_TYPE_1D;
+	vk_image_create_info.format = vk_format;
+	vk_image_create_info.extent = vk_extent;
+	vk_image_create_info.mipLevels = 10;
+	vk_image_create_info.arrayLayers =
+		physical_properties.limits.maxImageArrayLayers;
+	vk_image_create_info.samples = VK_SAMPLE_COUNT_4_BIT;
+	vk_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	vk_image_create_info.usage = vk_usage;
+	vk_image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	vk_image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	VkImage image = VK_NULL_HANDLE;
+	result = vkCreateImage(device, &vk_image_create_info, NULL, &image);
+	result = vkGetPhysicalDeviceImageFormatProperties(
+		devices[0], vk_format, VK_IMAGE_TYPE_1D, VK_IMAGE_TILING_LINEAR,
+		vk_usage, vk_image_flags, &image_format_properties);
+
+	VkImageSubresource vk_image_subresource;
+	vk_image_subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	vk_image_subresource.mipLevel = 10;
+	vk_image_subresource.arrayLayer = 0;
 
 	result = vkDeviceWaitIdle(device);
 	if (result != VK_SUCCESS) {
