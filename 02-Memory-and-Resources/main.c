@@ -290,7 +290,8 @@ int main()
 	vk_image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	VkImage image = VK_NULL_HANDLE;
-	result = vkCreateImage(device, &vk_image_create_info, NULL, &image);
+	result = vkCreateImage(device, &vk_image_create_info, &vk_allocator,
+			       &image);
 	result = vkGetPhysicalDeviceImageFormatProperties(
 		devices[0], vk_format, VK_IMAGE_TYPE_1D, VK_IMAGE_TILING_LINEAR,
 		vk_usage, vk_image_flags, &image_format_properties);
@@ -300,6 +301,77 @@ int main()
 	vk_image_subresource.mipLevel = 10;
 	vk_image_subresource.arrayLayer = 0;
 
+	VkSubresourceLayout vk_subresource_layout;
+
+	vkGetImageSubresourceLayout(device, image, &vk_image_subresource,
+				    &vk_subresource_layout);
+
+	printf("Offset: %zu\n"
+	       "Size: %zu\n"
+	       "RowPitch: %zu\n"
+	       "ArrayPitch: %zu\n"
+	       "DepthPitch: %zu\n",
+	       vk_subresource_layout.offset, vk_subresource_layout.rowPitch,
+	       vk_subresource_layout.arrayPitch,
+	       vk_subresource_layout.depthPitch);
+
+	if (physical_features.textureCompressionBC == VK_TRUE)
+		printf("Block Compessed format supported.\n");
+	if (physical_features.textureCompressionETC2 == VK_TRUE)
+		printf("ETC Compression format supported.\n");
+	if (physical_features.textureCompressionASTC_LDR == VK_TRUE)
+		printf("ASTC Compression supported.\n");
+
+	VkBufferViewCreateInfo buffer_view_create_info;
+	buffer_view_create_info.sType =
+		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+	buffer_view_create_info.pNext = NULL;
+	buffer_view_create_info.flags = 0;
+	buffer_view_create_info.buffer = buffer;
+	buffer_view_create_info.format = vk_format;
+	buffer_view_create_info.offset = 0;
+	buffer_view_create_info.range =
+		physical_properties.limits.maxTexelBufferElements;
+
+	VkBufferView vk_buffer_view = VK_NULL_HANDLE;
+	result = vkCreateBufferView(device, &buffer_view_create_info,
+				    &vk_allocator, &vk_buffer_view);
+
+	if (result != VK_SUCCESS) {
+		perror("vkCreateBuffer()");
+		return -1;
+	}
+
+	VkComponentMapping vk_component_mapping;
+	vk_component_mapping.r = 0;
+	vk_component_mapping.g = 0;
+	vk_component_mapping.b = 0;
+	vk_component_mapping.a = 0;
+
+	VkImageSubresourceRange vk_image_subresource_range;
+	vk_image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	vk_image_subresource_range.baseMipLevel = 0;
+	vk_image_subresource_range.levelCount = 1;
+	vk_image_subresource_range.baseArrayLayer = 0;
+	vk_image_subresource_range.layerCount = 1;
+
+	VkImageViewCreateInfo image_view_create_info;
+	image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	image_view_create_info.pNext = NULL;
+	image_view_create_info.flags = 0;
+	image_view_create_info.image = image;
+	image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_1D;
+	image_view_create_info.format = vk_format;
+	image_view_create_info.components = vk_component_mapping;
+	image_view_create_info.subresourceRange = vk_image_subresource_range;
+
+	VkImageView vk_image_view = VK_NULL_HANDLE;
+	result = vkCreateImageView(device, &image_view_create_info,
+				   &vk_allocator, &vk_image_view);
+	if (result != VK_SUCCESS) {
+		perror("vkCreateImageView()");
+		return -1;
+	}
 	result = vkDeviceWaitIdle(device);
 	if (result != VK_SUCCESS) {
 		perror("vkDeviceWaitIdle()");
