@@ -372,6 +372,36 @@ int main()
 		perror("vkCreateImageView()");
 		return -1;
 	}
+
+	VkMemoryAllocateInfo vk_memory_allocate_info;
+	vk_memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	vk_memory_allocate_info.pNext = NULL;
+	vk_memory_allocate_info.allocationSize = 1024 * 1024;
+	vk_memory_allocate_info.memoryTypeIndex =
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+	VkDeviceMemory vk_device_memory;
+	result = vkAllocateMemory(device, &vk_memory_allocate_info,
+				  &vk_allocator, &vk_device_memory);
+
+	VkDeviceSize device_size;
+	vkGetDeviceMemoryCommitment(device, vk_device_memory, &device_size);
+	void *data;
+
+	result = vkMapMemory(device, vk_device_memory, 0, VK_WHOLE_SIZE, 0,
+			     &data);
+	if (result != VK_SUCCESS) {
+		perror("vkMapMemory()");
+		return -1;
+	}
+	vkUnmapMemory(device, vk_device_memory);
+	vkFreeMemory(device, vk_device_memory, &vk_allocator);
+
+	vkDestroyBuffer(device, buffer, &vk_allocator);
+	vkDestroyBufferView(device, vk_buffer_view, &vk_allocator);
+	vkDestroyImage(device, image, &vk_allocator);
+	vkDestroyImageView(device, vk_image_view, &vk_allocator);
+
 	result = vkDeviceWaitIdle(device);
 	if (result != VK_SUCCESS) {
 		perror("vkDeviceWaitIdle()");
