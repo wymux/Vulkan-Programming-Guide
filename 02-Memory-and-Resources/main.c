@@ -1,6 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
+
+uint32_t chooseHeapFromFlags(VkMemoryRequirements *memoryRequirements,
+			     VkMemoryPropertyFlags requiredFlags,
+			     VkMemoryPropertyFlags preferredFlags,
+			     const VkPhysicalDevice *physicalDevice);
 
 static void *VKAPI_CALL vk_alloc(void *pUserData, size_t size, size_t alignment,
 				 VkSystemAllocationScope allocationScope)
@@ -230,7 +236,7 @@ int main()
 	VkBufferCreateInfo buffer_create_info;
 	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	buffer_create_info.pNext = NULL;
-	buffer_create_info.flags = 0;
+	buffer_create_info.flags = VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
 	buffer_create_info.size = 1024 * 1024;
 	buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
 				   VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -394,6 +400,82 @@ int main()
 		perror("vkMapMemory()");
 		return -1;
 	}
+
+	/* VkMappedMemoryRange vk_mapped_memory_range = { 0 }; */
+	/* vk_mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE; */
+	/* vk_mapped_memory_range.pNext = NULL; */
+	/* vk_mapped_memory_range.memory = vk_device_memory; */
+	/* vk_mapped_memory_range.offset = 0; */
+	/* vk_mapped_memory_range.size = VK_WHOLE_SIZE; */
+
+	/* result = vkFlushMappedMemoryRanges(device, 10, &vk_mapped_memory_range); */
+
+	/* if (result != VK_SUCCESS) { */
+	/* 	perror("vkPlushMappedMemoryRanges()"); */
+	/* 	return -1; */
+	/* } */
+
+	/* result = vkInvalidateMappedMemoryRanges(device, 10, */
+	/* 					&vk_mapped_memory_range); */
+
+	/* if (result != VK_SUCCESS) { */
+	/* 	perror("vkInvalidateMappedMemoryRanges()"); */
+	/* 	return -1; */
+	/* } */
+
+	VkMemoryRequirements vk_memory_requirements = { 0 };
+	vk_memory_requirements.size = 1024 * 10;
+	vk_memory_requirements.alignment = 1024;
+
+	uint32_t heap = chooseHeapFromFlags(
+		&vk_memory_requirements, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, devices);
+
+	vkGetBufferMemoryRequirements(device, buffer, &vk_memory_requirements);
+	vkGetImageMemoryRequirements(device, image, &vk_memory_requirements);
+
+	result = vkBindBufferMemory(device, buffer, vk_device_memory,
+				    device_size);
+	if (result != VK_SUCCESS) {
+		perror("vkBindBufferMemory()");
+		return -1;
+	}
+
+	result =
+		vkBindImageMemory(device, image, vk_device_memory, device_size);
+	if (result != VK_SUCCESS) {
+		perror("vkBindImageMemory()");
+		return -1;
+	}
+
+	uint32_t sparse_memory_requirement_count = 0;
+	vkGetImageSparseMemoryRequirements(
+		device, image, &sparse_memory_requirement_count, NULL);
+
+	VkSparseImageFormatProperties vk_sparse_image_format_properties = { 0 };
+	vk_sparse_image_format_properties.aspectMask =
+		VK_IMAGE_ASPECT_COLOR_BIT;
+	vk_sparse_image_format_properties.imageGranularity = vk_extent;
+	vk_sparse_image_format_properties.flags =
+		VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT;
+
+	VkSparseImageMemoryRequirements vk_sparse_image_memory_requirements = {
+		0
+	};
+
+	vk_sparse_image_memory_requirements.formatProperties =
+		vk_sparse_image_format_properties;
+	vkGetImageSparseMemoryRequirements(
+		device, image, &sparse_memory_requirement_count,
+		&vk_sparse_image_memory_requirements);
+
+	//
+	uint32_t sparse_image_property_count = 0;
+	VkSparseImageFormatProperties vk_sparse;
+	vkGetPhysicalDeviceSparseImageFormatProperties(
+		devices[0], vk_format, VK_IMAGE_TYPE_1D, 0, vk_usage,
+		VK_IMAGE_TILING_OPTIMAL, &sparse_image_property_count, NULL);
+
 	vkUnmapMemory(device, vk_device_memory);
 	vkFreeMemory(device, vk_device_memory, &vk_allocator);
 
@@ -412,4 +494,48 @@ int main()
 	vkDestroyInstance(instance, NULL);
 
 	return 0;
+}
+
+uint32_t chooseHeapFromFlags(VkMemoryRequirements *memoryRequirements,
+			     VkMemoryPropertyFlags requiredFlags,
+			     VkMemoryPropertyFlags preferredFlags,
+			     const VkPhysicalDevice *physicalDevice)
+{
+	VkPhysicalDeviceMemoryProperties device_memory_properties;
+
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice[0],
+					    &device_memory_properties);
+	uint32_t selected_type = 0;
+	uint32_t memory_type;
+	for (memory_type = 0; memory_type < 32; ++memory_type) {
+		if (memoryRequirements->memoryTypeBits & (1 << memory_type)) {
+			const VkMemoryType type =
+				device_memory_properties
+					.memoryTypes[memory_type];
+			if ((type.propertyFlags & preferredFlags) ==
+			    preferredFlags) {
+				selected_type = memory_type;
+				break;
+			}
+		}
+	}
+
+	if (selected_type != ~0u) {
+		for (memory_type = 0; memory_type < 32; ++memory_type) {
+			if (memoryRequirements->memoryTypeBits &
+			    (1 << memory_type)) {
+				const VkMemoryType type =
+					device_memory_properties
+						.memoryTypes[memory_type];
+
+				if ((type.propertyFlags & requiredFlags) ==
+				    requiredFlags) {
+					selected_type = memory_type;
+					break;
+				}
+			}
+		}
+	}
+
+	return selected_type;
 }
