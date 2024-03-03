@@ -469,12 +469,80 @@ int main()
 		device, image, &sparse_memory_requirement_count,
 		&vk_sparse_image_memory_requirements);
 
-	//
 	uint32_t sparse_image_property_count = 0;
-	VkSparseImageFormatProperties vk_sparse;
 	vkGetPhysicalDeviceSparseImageFormatProperties(
 		devices[0], vk_format, VK_IMAGE_TYPE_1D, 0, vk_usage,
 		VK_IMAGE_TILING_OPTIMAL, &sparse_image_property_count, NULL);
+	VkSparseImageFormatProperties *vk_sparse =
+		calloc(sparse_image_property_count,
+		       sizeof(VkSparseImageFormatProperties));
+
+	VkSparseMemoryBind vk_sparse_memory_bind = { 0 };
+	vk_sparse_memory_bind.resourceOffset = 0;
+	vk_sparse_memory_bind.size = VK_WHOLE_SIZE;
+	vk_sparse_memory_bind.memory = vk_device_memory;
+	vk_sparse_memory_bind.memoryOffset = 0;
+	vk_sparse_memory_bind.flags = VK_SPARSE_MEMORY_BIND_METADATA_BIT;
+
+	VkSparseBufferMemoryBindInfo vk_sparse_buffer_memory_bind_info = { 0 };
+	vk_sparse_buffer_memory_bind_info.buffer = buffer;
+	vk_sparse_buffer_memory_bind_info.bindCount = 100;
+	vk_sparse_buffer_memory_bind_info.pBinds = &vk_sparse_memory_bind;
+
+	VkSparseImageOpaqueMemoryBindInfo
+		vk_sparse_image_opaque_memory_bind_info = { 0 };
+	vk_sparse_image_opaque_memory_bind_info.image = image;
+	vk_sparse_image_opaque_memory_bind_info.bindCount = 1;
+	vk_sparse_image_opaque_memory_bind_info.pBinds = &vk_sparse_memory_bind;
+
+	VkSparseImageMemoryBind vk_sparse_image_memory_bind = { 0 };
+	vk_sparse_image_memory_bind.subresource = vk_image_subresource;
+	vk_sparse_image_memory_bind.offset = (VkOffset3D){ 0, 0, 0 };
+	vk_sparse_image_memory_bind.extent = (VkExtent3D){ 1, 1, 1 };
+	vk_sparse_image_memory_bind.memory = vk_device_memory;
+	vk_sparse_image_memory_bind.memoryOffset = 0;
+	vk_sparse_image_memory_bind.flags = 0;
+
+	VkSparseImageMemoryBindInfo vk_sparse_image_memory_bind_info = { 0 };
+	vk_sparse_image_memory_bind_info.image = image;
+	vk_sparse_image_memory_bind_info.bindCount = 1;
+	vk_sparse_image_memory_bind_info.pBinds = &vk_sparse_image_memory_bind;
+
+	VkBindSparseInfo vk_bind_sparse_info = { 0 };
+	vk_bind_sparse_info.sType = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO;
+	vk_bind_sparse_info.pNext = NULL;
+	vk_bind_sparse_info.waitSemaphoreCount = 0;
+	vk_bind_sparse_info.pWaitSemaphores = NULL;
+	vk_bind_sparse_info.bufferBindCount = 1;
+	vk_bind_sparse_info.pBufferBinds = &vk_sparse_buffer_memory_bind_info;
+	vk_bind_sparse_info.imageOpaqueBindCount = 1;
+	vk_bind_sparse_info.pImageOpaqueBinds =
+		&vk_sparse_image_opaque_memory_bind_info;
+	vk_bind_sparse_info.imageBindCount = 1;
+	vk_bind_sparse_info.pImageBinds = &vk_sparse_image_memory_bind_info;
+	vk_bind_sparse_info.signalSemaphoreCount = 0;
+	vk_bind_sparse_info.pSignalSemaphores = NULL;
+
+	VkFenceCreateInfo vk_fence_create_info = { 0 };
+	vk_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	vk_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	VkQueue vk_queue = VK_NULL_HANDLE;
+	VkFence vk_fence = VK_NULL_HANDLE;
+	result = vkCreateFence(device, &vk_fence_create_info, NULL, &vk_fence);
+	if (result != VK_SUCCESS) {
+		perror("vkCreateFence()");
+		return -1;
+	}
+
+	uint32_t queue_family_index = 0;
+	uint32_t queue_index = 0;
+	vkGetDeviceQueue(device, queue_family_index, queue_index, &vk_queue);
+	uint32_t bind_info_count = 0;
+	if (result != VK_SUCCESS) {
+		perror("vkQueueBindSparse()");
+		return -1;
+	}
 
 	vkUnmapMemory(device, vk_device_memory);
 	vkFreeMemory(device, vk_device_memory, &vk_allocator);
