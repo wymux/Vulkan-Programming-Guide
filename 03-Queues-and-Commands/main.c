@@ -540,6 +540,31 @@ int main()
 		return -1;
 	}
 
+	result = vkResetCommandBuffer(
+		vk_command_buffer,
+		VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+	if (result != VK_SUCCESS) {
+		perror("vkResetCommandBuffer()");
+		return -1;
+	}
+
+	result =
+		vkResetCommandPool(device, vk_command_pool,
+				   VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+
+	VkSubmitInfo vk_submit_info = { 0 };
+	vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	vk_submit_info.pNext = NULL;
+	vk_submit_info.waitSemaphoreCount = 0;
+	vk_submit_info.pWaitSemaphores = NULL;
+	vk_submit_info.pWaitDstStageMask = NULL;
+	vk_submit_info.commandBufferCount = 1;
+	vk_submit_info.pCommandBuffers = &vk_command_buffer;
+	vk_submit_info.signalSemaphoreCount = 0;
+	vk_submit_info.pSignalSemaphores = NULL;
+
+	result = vkQueueWaitIdle(device_queue);
+
 	uint32_t sparse_memory_requirement_count = 0;
 	vkGetImageSparseMemoryRequirements(
 		device, image, &sparse_memory_requirement_count, NULL);
@@ -617,7 +642,12 @@ int main()
 
 	VkFenceCreateInfo vk_fence_create_info = { 0 };
 	vk_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	vk_fence_create_info.pNext = NULL;
 	vk_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	VkFence vk_fence;
+	vkCreateFence(device, &vk_fence_create_info, &vk_allocator, &vk_fence);
+	/* result = vkQueueSubmit(device_queue, 1, &vk_submit_info, vk_fence); */
 
 	vkUnmapMemory(device, vk_device_memory);
 	vkFreeMemory(device, vk_device_memory, &vk_allocator);
