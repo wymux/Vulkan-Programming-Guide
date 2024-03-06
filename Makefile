@@ -1,16 +1,15 @@
 CC = gcc
 LDFLAGS = -lvulkan
 
-SRC = 01-Introduction/main.c 02-Memory-and-Resources/main.c 03-Queues-and-Commands/main.c
+SRC = 01-Introduction/main.c 02-Memory-and-Resources/main.c 03-Queues-and-Commands/main.c 04-Moving-Data/main.c
+OBJ = $(SRC:.c=.o)
+BIN = $(SRC:.c=)
 
-all: format 01-Introduction/main
+all: format $(BIN)
 
-01-Introduction/main: $(SRC)
-	$(CC) $(CFLAGS) -o $@ 01-Introduction/main.c $(LDFLAGS)
-	$(CC) $(CFLAGS) -o 02-Memory-and-Resources/main 02-Memory-and-Resources/main.c $(LDFLAGS)
-	$(CC) $(CFLAGS) -o 03-Queues-and-Commands/main 03-Queues-and-Commands/main.c $(LDFLAGS)
+%: %.o
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 format: $(SRC)
-	clang-format 01-Introduction/main.c -i
-	clang-format 02-Memory-and-Resources/main.c -i
-	clang-format 03-Queues-and-Commands/main.c -i
+	clang-format -i $^
+	touch format
