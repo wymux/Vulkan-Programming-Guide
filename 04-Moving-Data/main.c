@@ -534,24 +534,6 @@ int main()
 	vkCmdCopyBuffer(vk_command_buffer, src_buffer, dst_buffer, 1,
 			&vk_buffer_copy);
 
-	result = vkEndCommandBuffer(vk_command_buffer);
-	if (result != VK_SUCCESS) {
-		perror("vkEndCommandBuffer()");
-		return -1;
-	}
-
-	result = vkResetCommandBuffer(
-		vk_command_buffer,
-		VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-	if (result != VK_SUCCESS) {
-		perror("vkResetCommandBuffer()");
-		return -1;
-	}
-
-	result =
-		vkResetCommandPool(device, vk_command_pool,
-				   VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-
 	VkSubmitInfo vk_submit_info = { 0 };
 	vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	vk_submit_info.pNext = NULL;
@@ -648,6 +630,162 @@ int main()
 	VkFence vk_fence;
 	vkCreateFence(device, &vk_fence_create_info, &vk_allocator, &vk_fence);
 	/* result = vkQueueSubmit(device_queue, 1, &vk_submit_info, vk_fence); */
+
+	VkMemoryBarrier vk_memory_barrier = { 0 };
+	vk_memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+	vk_memory_barrier.pNext = NULL;
+	vk_memory_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+	vk_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+	VkBufferMemoryBarrier vk_buffer_memory_barrier = { 0 };
+	vk_buffer_memory_barrier.sType =
+		VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	vk_buffer_memory_barrier.pNext = NULL;
+	vk_buffer_memory_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+	vk_buffer_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	vk_buffer_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	vk_buffer_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	vk_buffer_memory_barrier.buffer = buffer;
+	vk_buffer_memory_barrier.offset = 0;
+	vk_buffer_memory_barrier.size = VK_WHOLE_SIZE;
+
+	VkImageSubresourceRange vk_image_subresource_range_02;
+	vk_image_subresource_range_02.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	vk_image_subresource_range_02.baseMipLevel = 0;
+	vk_image_subresource_range_02.levelCount = VK_REMAINING_MIP_LEVELS;
+	vk_image_subresource_range_02.baseArrayLayer = 0;
+	vk_image_subresource_range_02.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+	VkImageMemoryBarrier vk_image_memory_barrier = { 0 };
+	vk_image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	vk_image_memory_barrier.pNext = NULL;
+	vk_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	vk_image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	vk_image_memory_barrier.oldLayout =
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	vk_image_memory_barrier.newLayout =
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	vk_image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	vk_image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	vk_image_memory_barrier.image = image;
+	vk_image_memory_barrier.subresourceRange = vk_image_subresource_range;
+
+	vkCmdPipelineBarrier(vk_command_buffer,
+			     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			     VK_DEPENDENCY_BY_REGION_BIT, 1, &vk_memory_barrier,
+			     1, &vk_buffer_memory_barrier, 1,
+			     &vk_image_memory_barrier);
+
+	VkBufferCreateInfo vk_buffer_02_create_info = { 0 };
+	vk_buffer_02_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	vk_buffer_02_create_info.size = 1024 * 1024 * 1024;
+	vk_buffer_02_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+					 VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+					 VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	vk_buffer_02_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VkBuffer vk_buffer_02 = VK_NULL_HANDLE;
+	result = vkCreateBuffer(device, &vk_buffer_02_create_info,
+				&vk_allocator, &vk_buffer_02);
+	VkMemoryRequirements vk_buffer_02_memory_requirements = { 0 };
+	vkGetBufferMemoryRequirements(device, vk_buffer_02,
+				      &vk_buffer_02_memory_requirements);
+	VkDeviceMemory vk_buffer_02_memory;
+	result = vkAllocateMemory(device, &vk_memory_allocate_info,
+				  &vk_allocator, &vk_buffer_02_memory);
+	if (result != VK_SUCCESS) {
+		perror("vkAllocateMemory()");
+		return -1;
+	}
+	result = vkBindBufferMemory(device, vk_buffer_02, vk_buffer_02_memory,
+				    0);
+	if (result != VK_SUCCESS) {
+		perror("vkBindBufferMemory()");
+		return -1;
+	}
+	vkBeginCommandBuffer(vk_command_buffer, &vk_command_buffer_begin_info);
+	vkCmdFillBuffer(vk_command_buffer, vk_buffer_02, 0, VK_WHOLE_SIZE, 0);
+	uint32_t p_data = 1;
+	vkCmdUpdateBuffer(vk_command_buffer, vk_buffer_02, 0, 120, &p_data);
+
+	VkClearColorValue vk_clear_color_value = { 0.0f, 0.0f, 0.0f, 1.0f };
+	VkImageSubresourceRange vk_image_subresource_range_03;
+	vk_image_subresource_range_03.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	vk_image_subresource_range_03.baseMipLevel = 0;
+	vk_image_subresource_range_03.levelCount = 1;
+	vk_image_subresource_range_03.baseArrayLayer = 0;
+	vk_image_subresource_range_03.layerCount = 1;
+
+	vkCmdClearColorImage(vk_command_buffer, image,
+			     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			     &vk_clear_color_value, 1,
+			     &vk_image_subresource_range_03);
+
+	VkClearDepthStencilValue vk_clear_depth_stencil_value = { 1.0f, 0 };
+
+	vkCmdClearDepthStencilImage(vk_command_buffer, image,
+				    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				    &vk_clear_depth_stencil_value, 1,
+				    &vk_image_subresource_range_03);
+
+	VkImageSubresourceLayers vk_image_subresoure_layers = { 0 };
+	vk_image_subresoure_layers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	vk_image_subresoure_layers.mipLevel = 0;
+	vk_image_subresoure_layers.baseArrayLayer = 0;
+	vk_image_subresoure_layers.layerCount = 1;
+
+	VkBufferImageCopy vk_buffer_image_copy = { 0 };
+	vk_buffer_image_copy.bufferOffset = 0;
+	vk_buffer_image_copy.bufferRowLength = 0;
+	vk_buffer_image_copy.bufferImageHeight = 0;
+	vk_buffer_image_copy.imageSubresource = vk_image_subresoure_layers;
+	vk_buffer_image_copy.imageOffset = (VkOffset3D){ 0, 0, 0 };
+	vk_buffer_image_copy.imageExtent = (VkExtent3D){ 1, 1, 1 };
+
+	vkCmdCopyBufferToImage(vk_command_buffer, src_buffer, image,
+			       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+			       &vk_buffer_image_copy);
+
+	vkCmdCopyImageToBuffer(vk_command_buffer, image,
+			       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_buffer,
+			       1, &vk_buffer_image_copy);
+
+	VkImage dst_image;
+	result = vkCreateImage(device, &vk_image_create_info, &vk_allocator,
+			       &dst_image);
+
+	VkImageCopy vk_image_copy = { 0 };
+	vk_image_copy.srcSubresource = vk_image_subresoure_layers;
+	vk_image_copy.srcOffset = (VkOffset3D){ 0, 0, 0 };
+	vk_image_copy.dstSubresource = vk_image_subresoure_layers;
+	vk_image_copy.dstOffset = (VkOffset3D){ 0, 0, 0 };
+	vk_image_copy.extent = (VkExtent3D){ 1, 1, 1 };
+
+	vkCmdCopyImage(vk_command_buffer, image,
+		       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_image,
+		       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &vk_image_copy);
+
+	VkImageBlit vk_image_blit = { 0 };
+	/* vkCmdBlitImage */
+
+	result = vkEndCommandBuffer(vk_command_buffer);
+	if (result != VK_SUCCESS) {
+		perror("vkEndCommandBuffer()");
+		return -1;
+	}
+
+	result = vkResetCommandBuffer(
+		vk_command_buffer,
+		VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+	if (result != VK_SUCCESS) {
+		perror("vkResetCommandBuffer()");
+		return -1;
+	}
+
+	result =
+		vkResetCommandPool(device, vk_command_pool,
+				   VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 
 	vkUnmapMemory(device, vk_device_memory);
 	vkFreeMemory(device, vk_device_memory, &vk_allocator);
