@@ -67,30 +67,40 @@ int enumerate_layers(VkLayerProperties **vk_layer_properties,
 	return 1;
 }
 
+void print_extensions(uint32_t extension_count,
+		      VkExtensionProperties *vk_extension_properties)
+{
+	for (uint32_t i = 0; i < extension_count; i++) {
+		printf("- %s (version %d)\n",
+		       (vk_extension_properties)[i].extensionName,
+		       (vk_extension_properties)[i].specVersion);
+	}
+}
+
+void print_layers(uint32_t layer_count, VkLayerProperties *vk_layer_properties)
+{
+	for (uint32_t i = 0; i < layer_count; i++) {
+		printf("- %s (version %d)\n", vk_layer_properties[i].layerName,
+		       vk_layer_properties[i].specVersion);
+		printf("  Description: %s\n",
+		       vk_layer_properties[i].description);
+	}
+}
+
 int main()
 {
 	VkExtensionProperties *vk_extension_properties = NULL;
 	uint32_t extension_count = 0;
 	if (enumerate_extensions(&vk_extension_properties, &extension_count)) {
 		printf("Available Vulkan Extensions:\n");
-		for (uint32_t i = 0; i < extension_count; i++) {
-			printf("- %s (version %d)\n",
-			       (vk_extension_properties)[i].extensionName,
-			       (vk_extension_properties)[i].specVersion);
-		}
+		print_extensions(extension_count, vk_extension_properties);
 	}
 
 	VkLayerProperties *vk_layer_properties = NULL;
 	uint32_t layer_count = 0;
 	if (enumerate_layers(&vk_layer_properties, &layer_count)) {
 		printf("Available Vulkan Layers:\n");
-		for (uint32_t i = 0; i < layer_count; i++) {
-			printf("- %s (version %d)\n",
-			       vk_layer_properties[i].layerName,
-			       vk_layer_properties[i].specVersion);
-			printf("  Description: %s\n",
-			       vk_layer_properties[i].description);
-		}
+		print_layers(layer_count, vk_layer_properties);
 	}
 
 	VkApplicationInfo vk_app_info = {};
