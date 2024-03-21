@@ -4,18 +4,17 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
+#define GPU_INDEX 0
+
 void *wymux_allocation(void *pUserData, size_t size, size_t alignment,
 		       VkSystemAllocationScope allocationScope)
 {
 	void *pMemory = malloc(size);
-	printf("Allocation: size = %zu, alignment = %zu, scope = %d\n", size,
-	       alignment, allocationScope);
 	return pMemory;
 }
 
 void wymux_free(void *pUserData, void *pMemory)
 {
-	printf("Free: pMemory = %p\n", pMemory);
 	free(pMemory);
 }
 
@@ -24,8 +23,6 @@ void *wymux_reallocation(void *pUserData, void *pOriginal, size_t size,
 			 VkSystemAllocationScope allocationScope)
 {
 	void *pMemory = realloc(pOriginal, size);
-	printf("Reallocation: pOriginal = %p, size = %zu, alignment = %zu, scope = %d\n",
-	       pOriginal, size, alignment, allocationScope);
 	return pMemory;
 }
 
@@ -179,13 +176,195 @@ void print_physical_device_properties(VkPhysicalDevice device)
 	printf("\n");
 }
 
+void print_physical_device_features(VkPhysicalDevice vk_physical_device)
+{
+	VkPhysicalDeviceFeatures vk_physical_device_features;
+	vkGetPhysicalDeviceFeatures(vk_physical_device,
+				    &vk_physical_device_features);
+	printf("Physical Device Features:\n");
+	printf("robustBufferAccess: %d\n",
+	       vk_physical_device_features.robustBufferAccess);
+	printf("fullDrawIndexUint32: %d\n",
+	       vk_physical_device_features.fullDrawIndexUint32);
+	printf("imageCubeArray: %d\n",
+	       vk_physical_device_features.imageCubeArray);
+	printf("independentBlend: %d\n",
+	       vk_physical_device_features.independentBlend);
+	printf("geometryShader: %d\n",
+	       vk_physical_device_features.geometryShader);
+	printf("tessellationShader: %d\n",
+	       vk_physical_device_features.tessellationShader);
+	printf("sampleRateShading: %d\n",
+	       vk_physical_device_features.sampleRateShading);
+	printf("dualSrcBlend: %d\n", vk_physical_device_features.dualSrcBlend);
+	printf("logicOp: %d\n", vk_physical_device_features.logicOp);
+	printf("multiDrawIndirect: %d\n",
+	       vk_physical_device_features.multiDrawIndirect);
+	printf("drawIndirectFirstInstance: %d\n",
+	       vk_physical_device_features.drawIndirectFirstInstance);
+	printf("depthClamp: %d\n", vk_physical_device_features.depthClamp);
+	printf("depthBiasClamp: %d\n",
+	       vk_physical_device_features.depthBiasClamp);
+	printf("fillModeNonSolid: %d\n",
+	       vk_physical_device_features.fillModeNonSolid);
+	printf("depthBounds: %d\n", vk_physical_device_features.depthBounds);
+	printf("wideLines: %d\n", vk_physical_device_features.wideLines);
+	printf("largePoints: %d\n", vk_physical_device_features.largePoints);
+	printf("alphaToOne: %d\n", vk_physical_device_features.alphaToOne);
+	printf("multiViewport: %d\n",
+	       vk_physical_device_features.multiViewport);
+	printf("samplerAnisotropy: %d\n",
+	       vk_physical_device_features.samplerAnisotropy);
+	printf("textureCompressionETC2: %d\n",
+	       vk_physical_device_features.textureCompressionETC2);
+	printf("textureCompressionASTC_LDR: %d\n",
+	       vk_physical_device_features.textureCompressionASTC_LDR);
+	printf("textureCompressionBC: %d\n",
+	       vk_physical_device_features.textureCompressionBC);
+	printf("occlusionQueryPrecise: %d\n",
+	       vk_physical_device_features.occlusionQueryPrecise);
+	printf("pipelineStatisticsQuery: %d\n",
+	       vk_physical_device_features.pipelineStatisticsQuery);
+	printf("vertexPipelineStoresAndAtomics: %d\n",
+	       vk_physical_device_features.vertexPipelineStoresAndAtomics);
+	printf("fragmentStoresAndAtomics: %d\n",
+	       vk_physical_device_features.fragmentStoresAndAtomics);
+	printf("shaderTessellationAndGeometryPointSize: %d\n",
+	       vk_physical_device_features
+		       .shaderTessellationAndGeometryPointSize);
+	printf("shaderImageGatherExtended: %d\n",
+	       vk_physical_device_features.shaderImageGatherExtended);
+	printf("shaderStorageImageExtendedFormats: %d\n",
+	       vk_physical_device_features.shaderStorageImageExtendedFormats);
+	printf("shaderStorageImageMultisample: %d\n",
+	       vk_physical_device_features.shaderStorageImageMultisample);
+	printf("shaderStorageImageReadWithoutFormat: %d\n",
+	       vk_physical_device_features.shaderStorageImageReadWithoutFormat);
+	printf("shaderStorageImageWriteWithoutFormat: %d\n",
+	       vk_physical_device_features.shaderStorageImageWriteWithoutFormat);
+	printf("shaderUniformBufferArrayDynamicIndexing: %d\n",
+	       vk_physical_device_features
+		       .shaderUniformBufferArrayDynamicIndexing);
+	printf("shaderSampledImageArrayDynamicIndexing: %d\n",
+	       vk_physical_device_features
+		       .shaderSampledImageArrayDynamicIndexing);
+	printf("shaderStorageBufferArrayDynamicIndexing: %d\n",
+	       vk_physical_device_features
+		       .shaderStorageBufferArrayDynamicIndexing);
+	printf("shaderStorageImageArrayDynamicIndexing: %d\n",
+	       vk_physical_device_features
+		       .shaderStorageImageArrayDynamicIndexing);
+	printf("shaderClipDistance: %d\n",
+	       vk_physical_device_features.shaderClipDistance);
+	printf("shaderCullDistance: %d\n",
+	       vk_physical_device_features.shaderCullDistance);
+	printf("shaderFloat64: %d\n",
+	       vk_physical_device_features.shaderFloat64);
+	printf("shaderInt64: %d\n", vk_physical_device_features.shaderInt64);
+	printf("shaderInt16: %d\n", vk_physical_device_features.shaderInt16);
+	printf("shaderResourceResidency: %d\n",
+	       vk_physical_device_features.shaderResourceResidency);
+	printf("shaderResourceMinLod: %d\n",
+	       vk_physical_device_features.shaderResourceMinLod);
+	printf("sparseBinding: %d\n",
+	       vk_physical_device_features.sparseBinding);
+	printf("sparseResidencyBuffer: %d\n",
+	       vk_physical_device_features.sparseResidencyBuffer);
+	printf("sparseResidencyImage2D: %d\n",
+	       vk_physical_device_features.sparseResidencyImage2D);
+	printf("sparseResidencyImage3D: %d\n",
+	       vk_physical_device_features.sparseResidencyImage3D);
+	printf("sparseResidency2Samples: %d\n",
+	       vk_physical_device_features.sparseResidency2Samples);
+	printf("sparseResidency4Samples: %d\n",
+	       vk_physical_device_features.sparseResidency4Samples);
+	printf("sparseResidency8Samples: %d\n",
+	       vk_physical_device_features.sparseResidency8Samples);
+	printf("sparseResidency16Samples: %d\n",
+	       vk_physical_device_features.sparseResidency16Samples);
+	printf("sparseResidencyAliased: %d\n",
+	       vk_physical_device_features.sparseResidencyAliased);
+	printf("variableMultisampleRate: %d\n",
+	       vk_physical_device_features.variableMultisampleRate);
+	printf("inheritedQueries: %d\n",
+	       vk_physical_device_features.inheritedQueries);
+}
+
+void print_memory_properties(VkPhysicalDevice vk_physical_device)
+{
+	VkPhysicalDeviceMemoryProperties vk_physical_device_memory_properties = {
+		0
+	};
+	vkGetPhysicalDeviceMemoryProperties(
+		vk_physical_device, &vk_physical_device_memory_properties);
+	printf("Memory Properties:\n");
+	printf("  Memory Type Count: %u\n",
+	       vk_physical_device_memory_properties.memoryTypeCount);
+
+	for (uint32_t i = 0;
+	     i < vk_physical_device_memory_properties.memoryTypeCount; i++) {
+		printf("  Memory Type %u:\n", i);
+		printf("    Heap Index: %u\n",
+		       vk_physical_device_memory_properties.memoryTypes[i]
+			       .heapIndex);
+		printf("    Property Flags:\n");
+
+		if (vk_physical_device_memory_properties.memoryTypes[i]
+			    .propertyFlags &
+		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+			printf("      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT\n");
+		if (vk_physical_device_memory_properties.memoryTypes[i]
+			    .propertyFlags &
+		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+			printf("      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT\n");
+		if (vk_physical_device_memory_properties.memoryTypes[i]
+			    .propertyFlags &
+		    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+			printf("      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT\n");
+		if (vk_physical_device_memory_properties.memoryTypes[i]
+			    .propertyFlags &
+		    VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+			printf("      VK_MEMORY_PROPERTY_HOST_CACHED_BIT\n");
+		if (vk_physical_device_memory_properties.memoryTypes[i]
+			    .propertyFlags &
+		    VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+			printf("      VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT\n");
+		if (vk_physical_device_memory_properties.memoryTypes[i]
+			    .propertyFlags &
+		    VK_MEMORY_PROPERTY_PROTECTED_BIT)
+			printf("      VK_MEMORY_PROPERTY_PROTECTED_BIT\n");
+	}
+
+	printf("  Memory Heap Count: %u\n",
+	       vk_physical_device_memory_properties.memoryHeapCount);
+
+	for (uint32_t i = 0;
+	     i < vk_physical_device_memory_properties.memoryHeapCount; i++) {
+		printf("  Memory Heap %u:\n", i);
+		printf("    Size: %llu\n",
+		       (unsigned long long)vk_physical_device_memory_properties
+			       .memoryHeaps[i]
+			       .size);
+		printf("    Flags:\n");
+
+		if (vk_physical_device_memory_properties.memoryHeaps[i].flags &
+		    VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+			printf("      VK_MEMORY_HEAP_DEVICE_LOCAL_BIT\n");
+		if (vk_physical_device_memory_properties.memoryHeaps[i].flags &
+		    VK_MEMORY_HEAP_MULTI_INSTANCE_BIT)
+			printf("      VK_MEMORY_HEAP_MULTI_INSTANCE_BIT\n");
+	}
+}
+
 int main()
 {
-	VkAllocationCallbacks allocationCallbacks = { 0 };
-	allocationCallbacks.pUserData = NULL;
-	allocationCallbacks.pfnAllocation = wymux_allocation;
-	allocationCallbacks.pfnReallocation = wymux_reallocation;
-	allocationCallbacks.pfnFree = wymux_free;
+	VkAllocationCallbacks wymux_callbacks = { 0 };
+	wymux_callbacks.pUserData = NULL;
+	wymux_callbacks.pfnAllocation = wymux_allocation;
+	wymux_callbacks.pfnReallocation = wymux_reallocation;
+	wymux_callbacks.pfnFree = wymux_free;
+	wymux_callbacks.pfnInternalAllocation = NULL;
+	wymux_callbacks.pfnInternalFree = NULL;
 
 	VkExtensionProperties *vk_extension_properties = NULL;
 	uint32_t extension_count = 0;
@@ -256,7 +435,8 @@ int main()
 	VkResult res = VK_SUCCESS;
 	VkInstance vk_instance = VK_NULL_HANDLE;
 
-	res = vkCreateInstance(&vk_instance_create_info, NULL, &vk_instance);
+	res = vkCreateInstance(&vk_instance_create_info, &wymux_callbacks,
+			       &vk_instance);
 
 	if (res != VK_SUCCESS) {
 		fprintf(stderr, "Instance Creation Failure: error code: %d\n",
@@ -273,10 +453,12 @@ int main()
 	for (uint32_t i = 0; i < physical_device_count; i++) {
 		printf("Device %d:\n", i);
 		print_physical_device_properties(vk_physical_devices[i]);
+		print_physical_device_features(vk_physical_devices[i]);
+		print_memory_properties(vk_physical_devices[i]);
 	}
 
 	free(vk_physical_devices);
 	free(vk_extension_properties);
 	free(vk_layer_properties);
-	vkDestroyInstance(vk_instance, NULL);
+	vkDestroyInstance(vk_instance, &wymux_callbacks);
 }
