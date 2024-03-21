@@ -137,6 +137,23 @@ int enable_instance_layers(VkLayerProperties *vk_layer_properties,
 	return enabled_layer_count;
 }
 
+void print_physical_device_properties(VkPhysicalDevice device)
+{
+	VkPhysicalDeviceProperties properties;
+	vkGetPhysicalDeviceProperties(device, &properties);
+
+	printf("  Name: %s\n", properties.deviceName);
+	printf("  API Version: %d.%d.%d\n",
+	       VK_VERSION_MAJOR(properties.apiVersion),
+	       VK_VERSION_MINOR(properties.apiVersion),
+	       VK_VERSION_PATCH(properties.apiVersion));
+	printf("  Driver Version: %d\n", properties.driverVersion);
+	printf("  Vendor ID: %d\n", properties.vendorID);
+	printf("  Device ID: %d\n", properties.deviceID);
+	printf("  Device Type: %d\n", properties.deviceType);
+	printf("\n");
+}
+
 int main()
 {
 	VkExtensionProperties *vk_extension_properties = NULL;
@@ -215,5 +232,18 @@ int main()
 			res);
 	}
 
+	uint32_t physical_device_count = 0;
+	vkEnumeratePhysicalDevices(vk_instance, &physical_device_count, NULL);
+	VkPhysicalDevice *vk_physical_devices =
+		malloc(sizeof(VkPhysicalDevice) * physical_device_count);
+	vkEnumeratePhysicalDevices(vk_instance, &physical_device_count,
+				   vk_physical_devices);
+
+	for (uint32_t i = 0; i < physical_device_count; i++) {
+		printf("Device %d:\n", i);
+		print_physical_device_properties(vk_physical_devices[i]);
+	}
+
+	free(vk_physical_devices);
 	vkDestroyInstance(vk_instance, NULL);
 }
