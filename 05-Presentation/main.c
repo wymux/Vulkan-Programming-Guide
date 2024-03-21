@@ -4,6 +4,31 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
+void *wymux_allocation(void *pUserData, size_t size, size_t alignment,
+		       VkSystemAllocationScope allocationScope)
+{
+	void *pMemory = malloc(size);
+	printf("Allocation: size = %zu, alignment = %zu, scope = %d\n", size,
+	       alignment, allocationScope);
+	return pMemory;
+}
+
+void wymux_free(void *pUserData, void *pMemory)
+{
+	printf("Free: pMemory = %p\n", pMemory);
+	free(pMemory);
+}
+
+void *wymux_reallocation(void *pUserData, void *pOriginal, size_t size,
+			 size_t alignment,
+			 VkSystemAllocationScope allocationScope)
+{
+	void *pMemory = realloc(pOriginal, size);
+	printf("Reallocation: pOriginal = %p, size = %zu, alignment = %zu, scope = %d\n",
+	       pOriginal, size, alignment, allocationScope);
+	return pMemory;
+}
+
 int enumerate_extensions(VkExtensionProperties **vk_extension_properties,
 			 uint32_t *extension_count)
 {
@@ -88,11 +113,11 @@ void print_layers(uint32_t layer_count, VkLayerProperties *vk_layer_properties)
 	}
 }
 
-int enable_instance_extensions(VkExtensionProperties *vk_extension_properties,
-			       uint32_t vk_extension_count,
-			       const char *desired_extensions[],
-			       const uint32_t desired_extension_count,
-			       const char *enabled_extensions[])
+int enable_instance_extensions(
+	const VkExtensionProperties *vk_extension_properties,
+	uint32_t vk_extension_count, const char *desired_extensions[],
+	const uint32_t desired_extension_count,
+	const char *enabled_extensions[])
 {
 	uint32_t enabled_extension_count = 0;
 
@@ -113,7 +138,7 @@ int enable_instance_extensions(VkExtensionProperties *vk_extension_properties,
 	return enabled_extension_count;
 }
 
-int enable_instance_layers(VkLayerProperties *vk_layer_properties,
+int enable_instance_layers(const VkLayerProperties *vk_layer_properties,
 			   uint32_t vk_layer_count,
 			   const char *desired_layers[],
 			   uint32_t desired_layer_count,
@@ -156,6 +181,12 @@ void print_physical_device_properties(VkPhysicalDevice device)
 
 int main()
 {
+	VkAllocationCallbacks allocationCallbacks = { 0 };
+	allocationCallbacks.pUserData = NULL;
+	allocationCallbacks.pfnAllocation = wymux_allocation;
+	allocationCallbacks.pfnReallocation = wymux_reallocation;
+	allocationCallbacks.pfnFree = wymux_free;
+
 	VkExtensionProperties *vk_extension_properties = NULL;
 	uint32_t extension_count = 0;
 	if (enumerate_extensions(&vk_extension_properties, &extension_count)) {
@@ -245,5 +276,7 @@ int main()
 	}
 
 	free(vk_physical_devices);
+	free(vk_extension_properties);
+	free(vk_layer_properties);
 	vkDestroyInstance(vk_instance, NULL);
 }
