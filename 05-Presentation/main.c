@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
@@ -87,6 +88,55 @@ void print_layers(uint32_t layer_count, VkLayerProperties *vk_layer_properties)
 	}
 }
 
+int enable_instance_extensions(VkExtensionProperties *vk_extension_properties,
+			       uint32_t vk_extension_count,
+			       const char *desired_extensions[],
+			       const uint32_t desired_extension_count,
+			       const char *enabled_extensions[])
+{
+	uint32_t enabled_extension_count = 0;
+
+	for (uint32_t i = 0; i < desired_extension_count; i++) {
+		for (uint32_t j = 0; j < vk_extension_count; j++) {
+			if (strcmp(desired_extensions[i],
+				   vk_extension_properties[j].extensionName) ==
+			    0) {
+				printf("Loop: %s\n",
+				       vk_extension_properties[j].extensionName);
+				enabled_extensions[enabled_extension_count++] =
+					desired_extensions[i];
+				break;
+			}
+		}
+	}
+
+	return enabled_extension_count;
+}
+
+int enable_instance_layers(VkLayerProperties *vk_layer_properties,
+			   uint32_t vk_layer_count,
+			   const char *desired_layers[],
+			   uint32_t desired_layer_count,
+			   const char *enabled_layers[])
+{
+	uint32_t enabled_layer_count = 0;
+
+	for (uint32_t i = 0; i < desired_layer_count; i++) {
+		for (uint32_t j = 0; j < vk_layer_count; j++) {
+			if (strcmp(desired_layers[i],
+				   vk_layer_properties[j].layerName) == 0) {
+				printf("Loop: %s\n",
+				       vk_layer_properties[j].layerName);
+				enabled_layers[enabled_layer_count++] =
+					desired_layers[i];
+				break;
+			}
+		}
+	}
+
+	return enabled_layer_count;
+}
+
 int main()
 {
 	VkExtensionProperties *vk_extension_properties = NULL;
@@ -97,10 +147,10 @@ int main()
 	}
 
 	VkLayerProperties *vk_layer_properties = NULL;
-	uint32_t layer_count = 0;
-	if (enumerate_layers(&vk_layer_properties, &layer_count)) {
+	uint32_t instance_layer_count = 0;
+	if (enumerate_layers(&vk_layer_properties, &instance_layer_count)) {
 		printf("Available Vulkan Layers:\n");
-		print_layers(layer_count, vk_layer_properties);
+		print_layers(instance_layer_count, vk_layer_properties);
 	}
 
 	VkApplicationInfo vk_app_info = {};
@@ -112,21 +162,48 @@ int main()
 	vk_app_info.engineVersion = VK_MAKE_VERSION(1, 3, 0);
 	vk_app_info.apiVersion = VK_MAKE_VERSION(1, 3, 0);
 
-	const char *validation_layers[] = {
+	const char *desired_instance_layers[] = {
 		"VK_LAYER_KHRONOS_validation",
 		"VK_LAYER_LUNARG_parameter_validation",
-		"VK_LAYER_LUNARG_api_dump",
+		"VK_LAYER_LUNARG_api_dump", "VK_LAYER_NV_optimus"
 	};
+
+	const uint32_t desired_layer_count = sizeof(desired_instance_layers) /
+					     sizeof(desired_instance_layers[0]);
+
+	const char *enabled_instance_layers[desired_layer_count];
+	uint32_t enabled_layer_count = enable_instance_layers(
+		vk_layer_properties, instance_layer_count,
+		desired_instance_layers, desired_layer_count,
+		enabled_instance_layers);
+
+	const char *desired_instance_extensions[] = {
+		"VK_KHR_device_group_creation",
+		"VK_KHR_display",
+		"VK_KHR_external_fence_capabilities",
+		"VK_KHR_external_memory_capabilities",
+		"VK_KHR_external_semaphore_capabilities",
+	};
+	const uint32_t desired_extensions_count =
+		sizeof(desired_instance_extensions) /
+		sizeof(desired_instance_extensions[0]);
+	const char *enabled_instance_extensions[desired_extensions_count];
+
+	uint32_t enabled_extension_count = enable_instance_extensions(
+		vk_extension_properties, extension_count,
+		desired_instance_extensions, desired_extensions_count,
+		enabled_instance_extensions);
 
 	VkInstanceCreateInfo vk_instance_create_info = {};
 	vk_instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	vk_instance_create_info.pNext = NULL;
 	vk_instance_create_info.flags = 0;
 	vk_instance_create_info.pApplicationInfo = &vk_app_info;
-	vk_instance_create_info.enabledLayerCount = 0;
-	vk_instance_create_info.ppEnabledLayerNames = NULL;
-	vk_instance_create_info.enabledExtensionCount = 0;
-	vk_instance_create_info.ppEnabledExtensionNames = NULL;
+	vk_instance_create_info.enabledLayerCount = enabled_layer_count;
+	vk_instance_create_info.ppEnabledLayerNames = enabled_instance_layers;
+	vk_instance_create_info.enabledExtensionCount = enabled_extension_count;
+	vk_instance_create_info.ppEnabledExtensionNames =
+		enabled_instance_extensions;
 
 	VkResult res = VK_SUCCESS;
 	VkInstance vk_instance = VK_NULL_HANDLE;
