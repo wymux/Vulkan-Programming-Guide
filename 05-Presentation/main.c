@@ -26,7 +26,7 @@ void *wymux_reallocation(void *pUserData, void *pOriginal, size_t size,
 	return pMemory;
 }
 
-int enumerate_extensions(VkExtensionProperties **vk_extension_properties,
+int enumerate_instance_extensions(VkExtensionProperties **vk_instance_extension_properties,
 			 uint32_t *extension_count)
 {
 	VkResult res = VK_SUCCESS;
@@ -40,27 +40,27 @@ int enumerate_extensions(VkExtensionProperties **vk_extension_properties,
 		return 0;
 	}
 
-	*vk_extension_properties =
+	*vk_instance_extension_properties =
 		malloc(sizeof(VkExtensionProperties) * (*extension_count));
-	if (!(*vk_extension_properties)) {
+	if (!(*vk_instance_extension_properties)) {
 		fprintf(stderr, "Failed to allocate memory for extensions\n");
 		return 0;
 	}
 
 	res = vkEnumerateInstanceExtensionProperties(NULL, extension_count,
-						     *vk_extension_properties);
+						     *vk_instance_extension_properties);
 	if (res != VK_SUCCESS) {
 		fprintf(stderr,
 			"Failed to enumerate extensions: Error code: %d\n",
 			res);
-		free(*vk_extension_properties);
+		free(*vk_instance_extension_properties);
 		return 0;
 	}
 
 	return 1;
 }
 
-int enumerate_layers(VkLayerProperties **vk_layer_properties,
+int enumerate_instance_layers(VkLayerProperties **vk_instance_layer_properties,
 		     uint32_t *layer_count)
 {
 	VkResult res = VK_SUCCESS;
@@ -72,25 +72,25 @@ int enumerate_layers(VkLayerProperties **vk_layer_properties,
 		return 0;
 	}
 
-	*vk_layer_properties =
+	*vk_instance_layer_properties =
 		malloc(sizeof(VkLayerProperties) * (*layer_count));
-	if (!(*vk_layer_properties)) {
+	if (!(*vk_instance_layer_properties)) {
 		fprintf(stderr, "Failed to allocate memory for layers\n");
 		return 0;
 	}
 
 	res = vkEnumerateInstanceLayerProperties(layer_count,
-						 *vk_layer_properties);
+						 *vk_instance_layer_properties);
 	if (res != VK_SUCCESS) {
 		fprintf(stderr, "Failed to enumerate layers. Error code: %d\n",
 			res);
-		free(*vk_layer_properties);
+		free(*vk_instance_layer_properties);
 		return 0;
 	}
 	return 1;
 }
 
-void print_extensions(uint32_t extension_count,
+void print_device_extensions(uint32_t extension_count,
 		      VkExtensionProperties *vk_extension_properties)
 {
 	for (uint32_t i = 0; i < extension_count; i++) {
@@ -100,7 +100,7 @@ void print_extensions(uint32_t extension_count,
 	}
 }
 
-void print_layers(uint32_t layer_count, VkLayerProperties *vk_layer_properties)
+void print_device_layers(uint32_t layer_count, VkLayerProperties *vk_layer_properties)
 {
 	for (uint32_t i = 0; i < layer_count; i++) {
 		printf("- %s (version %d)\n", vk_layer_properties[i].layerName,
@@ -356,6 +356,58 @@ void print_memory_properties(VkPhysicalDevice vk_physical_device)
 	}
 }
 
+void print_queue_family_properties(VkPhysicalDevice physicalDevice)
+{
+	uint32_t queue_family_count = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice,
+						 &queue_family_count, NULL);
+
+	VkQueueFamilyProperties *queue_family_properties =
+		(VkQueueFamilyProperties *)malloc(
+			sizeof(VkQueueFamilyProperties) * queue_family_count);
+	vkGetPhysicalDeviceQueueFamilyProperties(
+		physicalDevice, &queue_family_count, queue_family_properties);
+
+	printf("Queue Family Properties:\n");
+	for (uint32_t i = 0; i < queue_family_count; i++) {
+		printf("  Queue Family %u:\n", i);
+		printf("    Queue Count: %u\n",
+		       queue_family_properties[i].queueCount);
+		printf("    Queue Flags:\n");
+
+		if (queue_family_properties[i].queueFlags &
+		    VK_QUEUE_GRAPHICS_BIT)
+			printf("      VK_QUEUE_GRAPHICS_BIT\n");
+		if (queue_family_properties[i].queueFlags &
+		    VK_QUEUE_COMPUTE_BIT)
+			printf("      VK_QUEUE_COMPUTE_BIT\n");
+		if (queue_family_properties[i].queueFlags &
+		    VK_QUEUE_TRANSFER_BIT)
+			printf("      VK_QUEUE_TRANSFER_BIT\n");
+		if (queue_family_properties[i].queueFlags &
+		    VK_QUEUE_SPARSE_BINDING_BIT)
+			printf("      VK_QUEUE_SPARSE_BINDING_BIT\n");
+		if (queue_family_properties[i].queueFlags &
+		    VK_QUEUE_PROTECTED_BIT)
+			printf("      VK_QUEUE_PROTECTED_BIT\n");
+
+		printf("    Timestamp Valid Bits: %u\n",
+		       queue_family_properties[i].timestampValidBits);
+		printf("    Min Image Transfer Granularity:\n");
+		printf("      Width: %u\n",
+		       queue_family_properties[i]
+			       .minImageTransferGranularity.width);
+		printf("      Height: %u\n",
+		       queue_family_properties[i]
+			       .minImageTransferGranularity.height);
+		printf("      Depth: %u\n",
+		       queue_family_properties[i]
+			       .minImageTransferGranularity.depth);
+	}
+
+	free(queue_family_properties);
+}
+
 int main()
 {
 	VkAllocationCallbacks wymux_callbacks = { 0 };
@@ -368,16 +420,16 @@ int main()
 
 	VkExtensionProperties *vk_extension_properties = NULL;
 	uint32_t extension_count = 0;
-	if (enumerate_extensions(&vk_extension_properties, &extension_count)) {
+	if (enumerate_instance_extensions(&vk_extension_properties, &extension_count)) {
 		printf("Available Vulkan Extensions:\n");
-		print_extensions(extension_count, vk_extension_properties);
+		print_device_extensions(extension_count, vk_extension_properties);
 	}
 
 	VkLayerProperties *vk_layer_properties = NULL;
 	uint32_t instance_layer_count = 0;
-	if (enumerate_layers(&vk_layer_properties, &instance_layer_count)) {
+	if (enumerate_instance_layers(&vk_layer_properties, &instance_layer_count)) {
 		printf("Available Vulkan Layers:\n");
-		print_layers(instance_layer_count, vk_layer_properties);
+		print_device_layers(instance_layer_count, vk_layer_properties);
 	}
 
 	VkApplicationInfo vk_app_info = {};
@@ -450,13 +502,40 @@ int main()
 	vkEnumeratePhysicalDevices(vk_instance, &physical_device_count,
 				   vk_physical_devices);
 
+	/* Print all properties: no side effects */
 	for (uint32_t i = 0; i < physical_device_count; i++) {
 		printf("Device %d:\n", i);
 		print_physical_device_properties(vk_physical_devices[i]);
 		print_physical_device_features(vk_physical_devices[i]);
 		print_memory_properties(vk_physical_devices[i]);
+		print_queue_family_properties(vk_physical_devices[i]);
 	}
 
+	VkPhysicalDeviceFeatures vk_physical_device_features;
+	vkGetPhysicalDeviceFeatures(vk_physical_devices[GPU_INDEX], &vk_physical_device_features);
+
+	uint32_t queue_family_index = 0;
+
+	VkDeviceQueueCreateInfo queue_create_info = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+		.queueFamilyIndex = queue_family_index,
+		.queueCount = 1,
+		.pQueuePriorities = (float[]){ 1.0f }
+	};
+
+	VkDeviceCreateInfo create_info = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		.pNext = NULL,
+		.flags = 0,
+		.queueCreateInfoCount = 1,
+		.pQueueCreateInfos = &queue_create_info,
+		.enabledLayerCount = 0,
+		.ppEnabledLayerNames = NULL,
+		.enabledExtensionCount = 0,
+		.ppEnabledExtensionNames = NULL,
+		.pEnabledFeatures = &vk_physical_device_features,
+	};
+	
 	free(vk_physical_devices);
 	free(vk_extension_properties);
 	free(vk_layer_properties);
