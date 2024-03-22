@@ -26,8 +26,9 @@ void *wymux_reallocation(void *pUserData, void *pOriginal, size_t size,
 	return pMemory;
 }
 
-int enumerate_instance_extensions(VkExtensionProperties **vk_instance_extension_properties,
-			 uint32_t *extension_count)
+int enumerate_instance_extensions(
+	VkExtensionProperties **vk_instance_extension_properties,
+	uint32_t *extension_count)
 {
 	VkResult res = VK_SUCCESS;
 
@@ -47,8 +48,8 @@ int enumerate_instance_extensions(VkExtensionProperties **vk_instance_extension_
 		return 0;
 	}
 
-	res = vkEnumerateInstanceExtensionProperties(NULL, extension_count,
-						     *vk_instance_extension_properties);
+	res = vkEnumerateInstanceExtensionProperties(
+		NULL, extension_count, *vk_instance_extension_properties);
 	if (res != VK_SUCCESS) {
 		fprintf(stderr,
 			"Failed to enumerate extensions: Error code: %d\n",
@@ -61,7 +62,7 @@ int enumerate_instance_extensions(VkExtensionProperties **vk_instance_extension_
 }
 
 int enumerate_instance_layers(VkLayerProperties **vk_instance_layer_properties,
-		     uint32_t *layer_count)
+			      uint32_t *layer_count)
 {
 	VkResult res = VK_SUCCESS;
 
@@ -91,7 +92,7 @@ int enumerate_instance_layers(VkLayerProperties **vk_instance_layer_properties,
 }
 
 void print_device_extensions(uint32_t extension_count,
-		      VkExtensionProperties *vk_extension_properties)
+			     VkExtensionProperties *vk_extension_properties)
 {
 	for (uint32_t i = 0; i < extension_count; i++) {
 		printf("- %s (version %d)\n",
@@ -100,7 +101,8 @@ void print_device_extensions(uint32_t extension_count,
 	}
 }
 
-void print_device_layers(uint32_t layer_count, VkLayerProperties *vk_layer_properties)
+void print_device_layers(uint32_t layer_count,
+			 VkLayerProperties *vk_layer_properties)
 {
 	for (uint32_t i = 0; i < layer_count; i++) {
 		printf("- %s (version %d)\n", vk_layer_properties[i].layerName,
@@ -420,14 +422,17 @@ int main()
 
 	VkExtensionProperties *vk_extension_properties = NULL;
 	uint32_t extension_count = 0;
-	if (enumerate_instance_extensions(&vk_extension_properties, &extension_count)) {
+	if (enumerate_instance_extensions(&vk_extension_properties,
+					  &extension_count)) {
 		printf("Available Vulkan Extensions:\n");
-		print_device_extensions(extension_count, vk_extension_properties);
+		print_device_extensions(extension_count,
+					vk_extension_properties);
 	}
 
 	VkLayerProperties *vk_layer_properties = NULL;
 	uint32_t instance_layer_count = 0;
-	if (enumerate_instance_layers(&vk_layer_properties, &instance_layer_count)) {
+	if (enumerate_instance_layers(&vk_layer_properties,
+				      &instance_layer_count)) {
 		printf("Available Vulkan Layers:\n");
 		print_device_layers(instance_layer_count, vk_layer_properties);
 	}
@@ -463,6 +468,7 @@ int main()
 		"VK_KHR_external_memory_capabilities",
 		"VK_KHR_external_semaphore_capabilities",
 	};
+
 	const uint32_t desired_extensions_count =
 		sizeof(desired_instance_extensions) /
 		sizeof(desired_instance_extensions[0]);
@@ -512,30 +518,37 @@ int main()
 	}
 
 	VkPhysicalDeviceFeatures vk_physical_device_features;
-	vkGetPhysicalDeviceFeatures(vk_physical_devices[GPU_INDEX], &vk_physical_device_features);
+	vkGetPhysicalDeviceFeatures(vk_physical_devices[GPU_INDEX],
+				    &vk_physical_device_features);
 
 	uint32_t queue_family_index = 0;
 
-	VkDeviceQueueCreateInfo queue_create_info = {
+	VkDeviceQueueCreateInfo vk_device_queue_create_info = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 		.queueFamilyIndex = queue_family_index,
 		.queueCount = 1,
 		.pQueuePriorities = (float[]){ 1.0f }
 	};
 
-	VkDeviceCreateInfo create_info = {
+	VkDeviceCreateInfo vk_device_create_info = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pNext = NULL,
 		.flags = 0,
 		.queueCreateInfoCount = 1,
-		.pQueueCreateInfos = &queue_create_info,
-		.enabledLayerCount = 0,
-		.ppEnabledLayerNames = NULL,
-		.enabledExtensionCount = 0,
-		.ppEnabledExtensionNames = NULL,
+		.pQueueCreateInfos = &vk_device_queue_create_info,
+		.enabledLayerCount = enabled_layer_count,
+		.ppEnabledLayerNames = enabled_instance_layers,
+		.enabledExtensionCount = enabled_extension_count,
+		.ppEnabledExtensionNames = enabled_instance_extensions,
 		.pEnabledFeatures = &vk_physical_device_features,
 	};
-	
+
+	VkDevice vk_device = VK_NULL_HANDLE;
+	res = vkCreateDevice(vk_physical_devices[GPU_INDEX], &vk_device_create_info,
+			     &wymux_callbacks, &vk_device);
+
+	res = vkDeviceWaitIdle(vk_device);
+
 	free(vk_physical_devices);
 	free(vk_extension_properties);
 	free(vk_layer_properties);
